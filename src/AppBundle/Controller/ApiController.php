@@ -31,6 +31,31 @@ class ApiController extends Controller
     }
 
     /**
+     * @Route("/GetAllCurrencies")
+     */
+    public function getAllCurrencies()
+    {
+        $response = Unirest\Request::get(
+            'https://api.fixer.io/latest',
+            null,
+            null
+        );
+
+        $currencies = array();
+        $currencies[] = "EUR";
+
+        foreach($response->body->rates as $key => $value){
+            $currencies[] = $key;
+        }
+
+        return new JsonResponse(
+            array(
+                'currencies' => $currencies,
+            )
+        );
+    }
+
+    /**
      * @Route("/ConvertCurrency")
      */
     public function convertCurrency(Request $request)
@@ -51,17 +76,16 @@ class ApiController extends Controller
                     $response = number_format(doubleval(simplexml_load_string($response->body)), 4);
                     break;
                 case "currencyconverter";
-                    $parameters = array('CurrencyFrom' => $currencyFrom, 'CurrencyTo' => $currencyTo, 'RateDate' => '1-26-2018');
+                    $parameters = array(
+                        'CurrencyFrom' => $currencyFrom,
+                        'CurrencyTo' => $currencyTo,
+                        'RateDate' => (new \DateTime())->format('m-d-Y'),
+                    );
                     $response = Unirest\Request::get(
                         'http://currencyconverter.kowabunga.net/converter.asmx/GetConversionRate',
                         null,
                         $parameters
                     );
-                    //var_dump((string) simplexml_load_string($response->body));
-                    //var_dump($response->body);
-                    //var_dump(number_format(doubleval("a")));
-                    //var_dump(number_format(doubleval(simplexml_load_string("a"))));
-                    //var_dump(simplexml_load_string("a"));
                     $response = number_format(doubleval(simplexml_load_string($response->body)), 4);
                     break;
                 case "fixerio";
@@ -69,7 +93,11 @@ class ApiController extends Controller
                     $parameters = array('base' => $currencyFrom, 'symbols' => $currencyTo);
                     $response = number_format(
                         doubleval(
-                            Unirest\Request::get('https://api.fixer.io/latest', null, $parameters)->body->rates->$currencyTo
+                            Unirest\Request::get(
+                                'https://api.fixer.io/latest',
+                                null,
+                                $parameters
+                            )->body->rates->$currencyTo
                         ),
                         4
                     );
