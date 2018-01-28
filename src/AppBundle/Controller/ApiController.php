@@ -10,20 +10,22 @@ use Symfony\Component\HttpKernel\Exception\BadRequestHttpException;
 use Unirest;
 
 /**
- * @Route("/api")
+ * @Route("/unapi")
  */
 class ApiController extends Controller
 {
     /**
-     * @Route("/getAllWebservices")
+     * @Route("/GetAllWebservices")
      */
     public function getAllWebservices()
     {
         return new JsonResponse(
             array(
-                'webservicex' => 'http://currencyconverter.kowabunga.net/converter.asmx/GetConversionRate',
-                'currencyconverter' => 'http://currencyconverter.kowabunga.net/converter.asmx',
-                'fixerio' => 'https://api.fixer.io/latest',
+                'webservices' => array(
+                    'webservicex' => 'http://currencyconverter.kowabunga.net/converter.asmx/GetConversionRate',
+                    'currencyconverter' => 'http://currencyconverter.kowabunga.net/converter.asmx',
+                    'fixerio' => 'https://api.fixer.io/latest',
+                ),
             )
         );
     }
@@ -34,31 +36,43 @@ class ApiController extends Controller
     public function convertCurrency(Request $request)
     {
         $webservice = $request->get("ws_name");
+        $currencyFrom = $request->get("currency_from");
+        $currencyTo = $request->get("currency_to");
 
-        if (!empty($webservice)) {
+        if (!empty($webservice) && !(empty($currencyFrom)) && !(empty($currencyTo))) {
             switch ($webservice) {
                 case "webservicex";
-                    $parameters = array('FromCurrency' => 'USD', 'ToCurrency' => 'EUR');
+                    $parameters = array('FromCurrency' => $currencyFrom, 'ToCurrency' => $currencyTo);
                     $response = Unirest\Request::get(
                         'http://webservicex.net/CurrencyConvertor.asmx/ConversionRate',
                         null,
                         $parameters
                     );
-                    $response = simplexml_load_string($response->body);
+                    $response = number_format(doubleval(simplexml_load_string($response->body)), 4);
                     break;
                 case "currencyconverter";
-                    $parameters = array('CurrencyFrom' => 'USD', 'CurrencyTo' => 'EUR', 'RateDate' => '1-26-2018');
+                    $parameters = array('CurrencyFrom' => $currencyFrom, 'CurrencyTo' => $currencyTo, 'RateDate' => '1-26-2018');
                     $response = Unirest\Request::get(
                         'http://currencyconverter.kowabunga.net/converter.asmx/GetConversionRate',
                         null,
                         $parameters
                     );
-                    $response = simplexml_load_string($response->body);
+                    //var_dump((string) simplexml_load_string($response->body));
+                    //var_dump($response->body);
+                    //var_dump(number_format(doubleval("a")));
+                    //var_dump(number_format(doubleval(simplexml_load_string("a"))));
+                    //var_dump(simplexml_load_string("a"));
+                    $response = number_format(doubleval(simplexml_load_string($response->body)), 4);
                     break;
                 case "fixerio";
                     //$headers = array('Accept' => 'application/json');
-                    $parameters = array('base' => 'USD', 'symbols' => 'EUR');
-                    $response = Unirest\Request::get('https://api.fixer.io/latest', null, $parameters)->body;
+                    $parameters = array('base' => $currencyFrom, 'symbols' => $currencyTo);
+                    $response = number_format(
+                        doubleval(
+                            Unirest\Request::get('https://api.fixer.io/latest', null, $parameters)->body->rates->$currencyTo
+                        ),
+                        4
+                    );
                     break;
                 default;
                     throw new BadRequestHttpException();
@@ -69,7 +83,7 @@ class ApiController extends Controller
 
         return new JsonResponse(
             array(
-                'response' => $response,
+                'rate' => $response,
             )
         );
     }
