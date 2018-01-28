@@ -10,7 +10,7 @@ use Symfony\Component\HttpKernel\Exception\BadRequestHttpException;
 use Unirest;
 
 /**
- * @Route("/unapi")
+ * @Route("/api")
  */
 class ApiController extends Controller
 {
