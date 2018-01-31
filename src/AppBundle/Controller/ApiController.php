@@ -2,6 +2,7 @@
 
 namespace AppBundle\Controller;
 
+use AppBundle\Helper\ConvertCurrencyHelper;
 use Symfony\Bundle\FrameworkBundle\Controller\Controller;
 use Sensio\Bundle\FrameworkExtraBundle\Configuration\Route;
 use Symfony\Component\HttpFoundation\JsonResponse;
@@ -65,53 +66,16 @@ class ApiController extends Controller
         $currencyTo = $request->get("currency_to");
 
         if (!empty($webservice) && !(empty($currencyFrom)) && !(empty($currencyTo))) {
-            switch ($webservice) {
-                case "webservicex";
-                    $parameters = array('FromCurrency' => $currencyFrom, 'ToCurrency' => $currencyTo);
-                    $response = Unirest\Request::get(
-                        'http://webservicex.net/CurrencyConvertor.asmx/ConversionRate',
-                        null,
-                        $parameters
-                    );
-                    $response = number_format(doubleval(simplexml_load_string($response->body)), 4);
-                    break;
-                case "currencyconverter";
-                    $parameters = array(
-                        'CurrencyFrom' => $currencyFrom,
-                        'CurrencyTo' => $currencyTo,
-                        'RateDate' => (new \DateTime())->format('m-d-Y'),
-                    );
-                    $response = Unirest\Request::get(
-                        'http://currencyconverter.kowabunga.net/converter.asmx/GetConversionRate',
-                        null,
-                        $parameters
-                    );
-                    $response = number_format(doubleval(simplexml_load_string($response->body)), 4);
-                    break;
-                case "fixerio";
-                    //$headers = array('Accept' => 'application/json');
-                    $parameters = array('base' => $currencyFrom, 'symbols' => $currencyTo);
-                    $response = number_format(
-                        doubleval(
-                            Unirest\Request::get(
-                                'https://api.fixer.io/latest',
-                                null,
-                                $parameters
-                            )->body->rates->$currencyTo
-                        ),
-                        4
-                    );
-                    break;
-                default;
-                    throw new BadRequestHttpException();
-            };
+
+            $convertHelper = new ConvertCurrencyHelper();
+
         } else {
             throw new BadRequestHttpException();
         }
 
         return new JsonResponse(
             array(
-                'rate' => $response,
+                'rate' => $convertHelper->Convert($currencyFrom, $currencyTo),
             )
         );
     }
