@@ -61,11 +61,10 @@ class ApiController extends Controller
      */
     public function convertCurrency(Request $request)
     {
-        $webservice = $request->get("ws_name");
         $currencyFrom = $request->get("currency_from");
         $currencyTo = $request->get("currency_to");
 
-        if (!empty($webservice) && !(empty($currencyFrom)) && !(empty($currencyTo))) {
+        if (!(empty($currencyFrom)) && !(empty($currencyTo))) {
 
             $convertHelper = new ConvertCurrencyHelper();
 
