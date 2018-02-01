@@ -8,7 +8,6 @@ use Sensio\Bundle\FrameworkExtraBundle\Configuration\Route;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpKernel\Exception\BadRequestHttpException;
-use Unirest;
 
 /**
  * @Route("/api")
@@ -16,42 +15,15 @@ use Unirest;
 class ApiController extends Controller
 {
     /**
-     * @Route("/GetAllWebservices")
-     */
-    public function getAllWebservices()
-    {
-        return new JsonResponse(
-            array(
-                'webservices' => array(
-                    'webservicex' => 'http://currencyconverter.kowabunga.net/converter.asmx/GetConversionRate',
-                    'currencyconverter' => 'http://currencyconverter.kowabunga.net/converter.asmx',
-                    'fixerio' => 'https://api.fixer.io/latest',
-                ),
-            )
-        );
-    }
-
-    /**
      * @Route("/GetAllCurrencies")
      */
     public function getAllCurrencies()
     {
-        $response = Unirest\Request::get(
-            'https://api.fixer.io/latest',
-            null,
-            null
-        );
-
-        $currencies = array();
-        $currencies[] = "EUR";
-
-        foreach($response->body->rates as $key => $value){
-            $currencies[] = $key;
-        }
+        $convertHelper = new ConvertCurrencyHelper();
 
         return new JsonResponse(
             array(
-                'currencies' => $currencies,
+                'currencies' => $convertHelper->getAllCurrencies(),
             )
         );
     }
@@ -61,10 +33,17 @@ class ApiController extends Controller
      */
     public function convertCurrency(Request $request)
     {
+        $amount = $request->get("amount");
         $currencyFrom = $request->get("currency_from");
         $currencyTo = $request->get("currency_to");
 
-        if (!(empty($currencyFrom)) && !(empty($currencyTo))) {
+        $convertHelper = new ConvertCurrencyHelper();
+        $currencies = $convertHelper->getAllLocalCurrencies();
+
+        /**
+         * Controleer input en of from en to currency correct is
+         */
+        if (!empty($amount) && is_numeric($amount) && $amount > 0 && !(empty($currencyFrom)) && !(empty($currencyTo)) && in_array($currencyFrom, $currencies) && in_array($currencyTo, $currencies)) {
 
             $convertHelper = new ConvertCurrencyHelper();
 
@@ -74,7 +53,7 @@ class ApiController extends Controller
 
         return new JsonResponse(
             array(
-                'rate' => $convertHelper->Convert($currencyFrom, $currencyTo),
+                'rate' => $convertHelper->Convert($currencyFrom, $currencyTo) * $amount,
             )
         );
     }
